@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sn
 from matplotlib.collections import QuadMesh
-
+import matplotlib
 
 def get_new_fig(fn, figsize=[9, 9]):
     """Init graphics"""
@@ -70,7 +70,7 @@ def configcell_text_and_colors(
         # text to ADD
         font_prop = fm.FontProperties(weight="bold", size=fz)
         text_kwargs = dict(
-            color="w",
+            color="black",
             ha="center",
             va="center",
             gid="sum",
@@ -119,11 +119,11 @@ def configcell_text_and_colors(
         # main diagonal
         if col == lin:
             # set color of the textin the diagonal to white
-            oText.set_color("w")
+            oText.set_color("black")
             # set background color in the diagonal to blue
             facecolors[posi] = [0.35, 0.8, 0.55, 1.0]
         else:
-            oText.set_color("r")
+            oText.set_color("black")
 
     return text_add, text_del
 
@@ -136,9 +136,9 @@ def insert_totals(df_cm):
     sum_lin = []
     for item_line in df_cm.iterrows():
         sum_lin.append(item_line[1].sum())
-    df_cm["sum_lin"] = sum_lin
+    df_cm["sum"] = sum_lin
     sum_col.append(np.sum(sum_lin))
-    df_cm.loc["sum_col"] = sum_col
+    df_cm.loc["sum"] = sum_col
 
 
 def pp_matrix(
@@ -152,7 +152,8 @@ def pp_matrix(
     figsize=[8, 8],
     show_null_values=0,
     pred_val_axis="y",
-    path_to_save_img="",
+    name = "Confusion matrix",
+    savepath=None,
 ):
     """
     print conf matrix with default layout (like matlab)
@@ -178,7 +179,14 @@ def pp_matrix(
     insert_totals(df_cm)
 
     # this is for print allways in the same window
-    fig, ax1 = get_new_fig("Conf matrix default", figsize)
+    fig, ax1 = get_new_fig(name, figsize)
+
+
+    min_val, max_val = 0.0,0.5
+    n = 10
+    orig_cmap = plt.cm.Blues
+    colors = orig_cmap(np.linspace(min_val, max_val, n))
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("mycmap", colors)
 
     ax = sn.heatmap(
         df_cm,
@@ -239,12 +247,19 @@ def pp_matrix(
     ax.set_xlabel(xlbl)
     ax.set_ylabel(ylbl)
     plt.tight_layout()  # set layout slim
-
-    # save or show the img result
-    if not path_to_save_img:
-        plt.show()
+    if savepath is not None:
+        plt.savefig(f"{savepath}/{name}.png")
+        plt.savefig(f"{savepath}/{name}.svg")
+        plt.show(block=False)
+        plt.close()
     else:
-        plt.savefig(path_to_save_img)
+        plt.show()
+    # plt.show(block=False)
+    # plt.pause(1)
+    # input()
+    # plt.close()
+
+
 
 
 def pp_matrix_from_data(
@@ -257,10 +272,11 @@ def pp_matrix_from_data(
     fz=11,
     lw=0.5,
     cbar=False,
-    figsize=[8, 8],
+    figsize=[3, 3],
     show_null_values=0,
     pred_val_axis="lin",
-    path_to_save_img="",
+    name = "Confusion matrix",
+    savepath=None,
 ):
     """
     plot confusion matrix function with y_test (actual values) and predictions (predic),
@@ -278,7 +294,8 @@ def pp_matrix_from_data(
             for i in list(ascii_uppercase)[0 : len(np.unique(y_test))]
         ]
 
-    confm = confusion_matrix(y_test, predictions)
+    labels=np.arange(len(columns))
+    confm = confusion_matrix(y_test, predictions, labels=labels)
     df_cm = DataFrame(confm, index=columns, columns=columns)
     pp_matrix(
         df_cm,
@@ -287,5 +304,6 @@ def pp_matrix_from_data(
         figsize=figsize,
         show_null_values=show_null_values,
         pred_val_axis=pred_val_axis,
-        path_to_save_img=path_to_save_img
+        name = name,
+        savepath=savepath,
     )
